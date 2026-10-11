@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rust-Toolchain aktualisieren
+        run: rustup update stable && rustup default stable
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Exe umbenennen
+        run: Copy-Item target\release\windows-resizer.exe "wndw-reszr-$env:GITHUB_REF_NAME.exe"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wndw-reszr-${{ github.ref_name }}
+          path: wndw-reszr-${{ github.ref_name }}.exe
+          if-no-files-found: error
+
+      - name: GitHub-Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$env:GITHUB_REF_NAME" "wndw-reszr-$env:GITHUB_REF_NAME.exe" --title "Wndw Reszr $env:GITHUB_REF_NAME" --generate-notes --verify-tag
