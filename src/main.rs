@@ -440,7 +440,7 @@ impl App {
             .frame(frame)
             .show(ctx, |ui| {
                 let colors = theme::colors(ui);
-                ui.heading(t.settings);
+                let heading = ui.heading(t.settings).rect;
                 ui.add_space(4.0);
                 egui::Grid::new("settings")
                     .num_columns(2)
@@ -468,8 +468,31 @@ impl App {
                         }
                         ui.end_row();
                     });
-                ui.add_space(4.0);
-                close = ui.button(t.close).clicked();
+                // Placed after the content so it can sit at the dialog's right edge
+                // without stretching the modal.
+                let size = egui::Vec2::splat(heading.height());
+                let rect = egui::Rect::from_min_size(
+                    egui::pos2(ui.min_rect().right() - size.x, heading.top()),
+                    size,
+                );
+                let response = ui
+                    .interact(rect, ui.id().with("close"), egui::Sense::click())
+                    .on_hover_text(t.close);
+                response.widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::WidgetType::Button, true, t.close)
+                });
+                let visuals = ui.style().interact(&response);
+                if response.hovered() {
+                    ui.painter()
+                        .rect_filled(rect, visuals.corner_radius, visuals.weak_bg_fill);
+                }
+                let cross = rect.shrink(size.x * 0.3);
+                let stroke = egui::Stroke::new(1.5, visuals.fg_stroke.color);
+                ui.painter()
+                    .line_segment([cross.left_top(), cross.right_bottom()], stroke);
+                ui.painter()
+                    .line_segment([cross.right_top(), cross.left_bottom()], stroke);
+                close = response.clicked();
             });
         if changed {
             self.settings.save();
